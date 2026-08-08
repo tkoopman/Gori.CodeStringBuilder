@@ -16,6 +16,8 @@
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <Authors>Tim Koopman</Authors>
+    <RepositoryUrl>https://github.com/tkoopman/Gori.CodeStringBuilder</RepositoryUrl>
+    <PackageTags>ai-assisted-coding</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
