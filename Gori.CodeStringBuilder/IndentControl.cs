@@ -1,7 +1,7 @@
-﻿namespace Gori.CodeStringBuilder;
+namespace Gori.CodeStringBuilder;
 
 /// <summary>
-/// Options for controlling how to process writes
+/// Options for controlling how to process writes.
 /// </summary>
 public enum IndentControl
 {

@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Gori.CodeStringBuilder;
@@ -62,57 +62,31 @@ public class CodeStringBuilder
     public const char BlankLinePost = '\x1E';
 
     /// <summary>
-    /// Alias for <see cref="IndentIncreasePost"/>
+    /// Alias for <see cref="IndentIncreasePost"/>.
     /// </summary>
     public const char Increase = IndentIncreasePost;
 
     /// <summary>
-    /// Alias for <see cref="IndentDecreasePre"/>
+    /// Alias for <see cref="IndentDecreasePre"/>.
     /// </summary>
     public const char Decrease = IndentDecreasePre;
 
-    /// <summary>
-    /// Constructs a new CodeStringBuilder configured for C#.
-    /// </summary>
-    /// <param name="fullAuto">Default IndentControl is <see cref="IndentControl.Auto"/>. Setting this to true will make it <see cref="IndentControl.FullAuto"/></param>
-    public static CodeStringBuilder CreateCSharpBuilder (bool fullAuto = false) => new()
-    {
-        IndentSize = 4,
-        IndentChar = ' ',
-        IndentControl = fullAuto ? IndentControl.FullAuto : IndentControl.Auto,
-        ForceIndentOn = '{',
-        ForceIndentOff = '}',
-        ForceBlankLineAfterOff = true,
-        NoIndentChar = '#',
-    };
-
-    private readonly StringBuilder _stringBuilder = new();
-    private bool _pendingBlankLine;
-    private bool _lastLineWasBlank;
+    private readonly StringBuilder stringBuilder = new();
+    private bool pendingBlankLine;
+    private bool lastLineWasBlank;
 
     /// <summary>
-    /// Calculates and caches current indent string.
-    /// Set to null! to clear cache.
-    /// </summary>
-    private string CurrentIndent
-    {
-        get => field ??= new string(IndentChar, Indents * IndentSize);
-
-        set;
-    }
-
-    /// <summary>
-    /// Char to use for indents
+    /// Gets char used for indents.
     /// </summary>
     public char IndentChar { get; init; } = ' ';
 
     /// <summary>
-    /// How to apply indents by default. Can be overridden using <see cref="WriteLine(string?, IndentControl)"/> if required.
+    /// Gets how to apply indents by default. Can be overridden using <see cref="WriteLine(string?, IndentControl)"/> if required.
     /// </summary>
     public IndentControl IndentControl { get; init; } = IndentControl.Auto;
 
     /// <summary>
-    /// Current indent depth. Actual indent added will be Indents x IndentSize
+    /// Gets or sets current indent depth. Actual indent added will be Indents x IndentSize.
     /// </summary>
     public int Indents
     {
@@ -126,19 +100,19 @@ public class CodeStringBuilder
     }
 
     /// <summary>
-    /// Number of characters to add per Indent
+    /// Gets number of characters to add per Indent.
     /// </summary>
     public int IndentSize { get; init; } = 4;
 
     /// <summary>
-    /// If line starts with this char, no indentation will be applied.
+    /// Gets char that if line starts with, no indentation will be applied.
     /// Note: Char is still output and control chars at end of line will still be processed and removed.
     /// Default: '\0' which disables this feature.
     /// </summary>
     public char NoIndentChar { get; init; }
 
     /// <summary>
-    /// If line ends with this char and only other characters are whitespace, will auto increase indent depth after writing.
+    /// Gets char that if line ends with and only other characters are whitespace, will auto increase indent depth after writing.
     /// Default: '\0' which disables this feature.
     /// </summary>
     /// <remarks>
@@ -168,25 +142,53 @@ public class CodeStringBuilder
     public char ForceIndentOff { get; init; }
 
     /// <summary>
-    /// Should a blank line be forced after <see cref="ForceIndentOff"/> is triggered.
+    /// Gets a value indicating whether <see cref="ForceIndentOff"/> char should force a blank line after it.
     /// Will only add if another line is written and it isn't a blank line.
     /// </summary>
     public bool ForceBlankLineAfterOff { get; init; }
 
     /// <summary>
+    /// Gets or sets the cached current indent string.
+    /// Set to null! to clear cache, and have it recalculated next call to this property.
+    /// </summary>
+    private string CurrentIndent
+    {
+        get => field ??= new string(IndentChar, Indents * IndentSize);
+
+        set;
+    }
+
+    /// <summary>
+    /// Constructs a new CodeStringBuilder configured for C#.
+    /// </summary>
+    /// <param name="fullAuto">Default IndentControl is <see cref="IndentControl.Auto"/>. Setting this to true will make it <see cref="IndentControl.FullAuto"/>.</param>
+    /// <returns>CodeStringBuilder configured for C#.</returns>
+    public static CodeStringBuilder CreateCSharpBuilder(bool fullAuto = false) => new()
+    {
+        IndentSize = 4,
+        IndentChar = ' ',
+        IndentControl = fullAuto ? IndentControl.FullAuto : IndentControl.Auto,
+        ForceIndentOn = '{',
+        ForceIndentOff = '}',
+        ForceBlankLineAfterOff = true,
+        NoIndentChar = '#',
+    };
+
+    /// <summary>
     /// Returns string containing all code written to this instance.
     /// </summary>
-    public override string ToString () => _stringBuilder.ToString();
+    /// <returns>Contents written to string builder.</returns>
+    public override string ToString() => stringBuilder.ToString();
 
     /// <summary>
     /// Clears current string builder and resets Indents to 0.
     /// </summary>
-    public void Clear ()
+    public void Clear()
     {
-        _ = _stringBuilder.Clear();
+        _ = stringBuilder.Clear();
         Indents = 0;
-        _pendingBlankLine = false;
-        _lastLineWasBlank = false;
+        pendingBlankLine = false;
+        lastLineWasBlank = false;
     }
 
     /// <summary>
@@ -196,9 +198,9 @@ public class CodeStringBuilder
     ///  - Blank line is added by either previous or next WriteLine calls.
     /// </summary>
     /// <returns>This instance to allow chaining.</returns>
-    public CodeStringBuilder ForceBlankLine ()
+    public CodeStringBuilder ForceBlankLine()
     {
-        _pendingBlankLine = true;
+        pendingBlankLine = true;
         return this;
     }
 
@@ -207,139 +209,139 @@ public class CodeStringBuilder
     /// </summary>
     /// <returns>This instance to allow chaining.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public CodeStringBuilder WriteLine ()
+    public CodeStringBuilder WriteLine()
         => WriteLine(null, IndentControl);
 
     /// <summary>
-    /// Write line(s)
+    /// Write line(s).
     /// </summary>
-    /// <param name="text">Line or lines to output</param>
+    /// <param name="text">Line or lines to output.</param>
     /// <returns>This instance to allow chaining.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public CodeStringBuilder WriteLine (string? text)
+    public CodeStringBuilder WriteLine(string? text)
         => WriteLine(text, IndentControl);
 
     /// <summary>
     /// Write line(s) if <paramref name="doWrite"/> is true.
     /// </summary>
     /// <param name="doWrite">
-    /// If false, will skip this write. Useful when chaining commands, 
+    /// If false, will skip this write. Useful when chaining commands,
     /// instead of breaking chain to insert if statement.
     /// </param>
-    /// <param name="text">Line or lines to output</param>
+    /// <param name="text">Line or lines to output.</param>
     /// <returns>This instance to allow chaining.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public CodeStringBuilder WriteLineIf (bool doWrite, string? text)
+    public CodeStringBuilder WriteLineIf(bool doWrite, string? text)
         => doWrite ? WriteLine(text, IndentControl) : this;
 
     /// <summary>
     /// Write line(s) if <paramref name="doWrite"/> is true.
     /// </summary>
     /// <param name="doWrite">
-    /// If false, will skip this write. Useful when chaining commands, 
+    /// If false, will skip this write. Useful when chaining commands,
     /// instead of breaking chain to insert if statement.
     /// </param>
-    /// <param name="text">Line or lines to output</param>
+    /// <param name="text">Line or lines to output.</param>
     /// <returns>This instance to allow chaining.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public CodeStringBuilder WriteLineIf (bool doWrite, Func<string?> text)
+    public CodeStringBuilder WriteLineIf(bool doWrite, Func<string?> text)
         => doWrite ? WriteLine(text(), IndentControl) : this;
 
     /// <summary>
     /// Write line(s) if <paramref name="doWrite"/> is true.
     /// </summary>
     /// <param name="doWrite">
-    /// If false, will skip this write. Useful when chaining commands, 
+    /// If false, will skip this write. Useful when chaining commands,
     /// instead of breaking chain to insert if statement.
     /// </param>
-    /// <param name="text">Line or lines to output</param>
+    /// <param name="text">Line or lines to output.</param>
     /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
     /// <returns>This instance to allow chaining.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public CodeStringBuilder WriteLineIf (bool doWrite, string? text, IndentControl indentControl)
+    public CodeStringBuilder WriteLineIf(bool doWrite, string? text, IndentControl indentControl)
         => doWrite ? WriteLine(text, indentControl) : this;
 
     /// <summary>
     /// Write line(s) if <paramref name="doWrite"/> is true.
     /// </summary>
     /// <param name="doWrite">
-    /// If false, will skip this write. Useful when chaining commands, 
+    /// If false, will skip this write. Useful when chaining commands,
     /// instead of breaking chain to insert if statement.
     /// </param>
-    /// <param name="text">Line or lines to output</param>
+    /// <param name="text">Line or lines to output.</param>
     /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
     /// <returns>This instance to allow chaining.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public CodeStringBuilder WriteLineIf (bool doWrite, Func<string?> text, IndentControl indentControl)
+    public CodeStringBuilder WriteLineIf(bool doWrite, Func<string?> text, IndentControl indentControl)
         => doWrite ? WriteLine(text(), indentControl) : this;
 
     /// <summary>
     /// Write line(s) if <paramref name="predicate"/> is true.
     /// </summary>
     /// <param name="predicate">
-    /// If returns false, will skip this write. Useful when chaining commands, 
+    /// If returns false, will skip this write. Useful when chaining commands,
     /// instead of breaking chain to insert if statement.
     /// </param>
-    /// <param name="text">Line or lines to output</param>
+    /// <param name="text">Line or lines to output.</param>
     /// <returns>This instance to allow chaining.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public CodeStringBuilder WriteLineIf (Func<bool> predicate, string? text)
+    public CodeStringBuilder WriteLineIf(Func<bool> predicate, string? text)
         => predicate() ? WriteLine(text, IndentControl) : this;
 
     /// <summary>
     /// Write line(s) if <paramref name="predicate"/> is true.
     /// </summary>
     /// <param name="predicate">
-    /// If returns false, will skip this write. Useful when chaining commands, 
+    /// If returns false, will skip this write. Useful when chaining commands,
     /// instead of breaking chain to insert if statement.
     /// </param>
-    /// <param name="text">Line or lines to output</param>
+    /// <param name="text">Line or lines to output.</param>
     /// <returns>This instance to allow chaining.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public CodeStringBuilder WriteLineIf (Func<bool> predicate, Func<string?> text)
+    public CodeStringBuilder WriteLineIf(Func<bool> predicate, Func<string?> text)
         => predicate() ? WriteLine(text(), IndentControl) : this;
 
     /// <summary>
     /// Write line(s) if <paramref name="predicate"/> is true.
     /// </summary>
     /// <param name="predicate">
-    /// If returns false, will skip this write. Useful when chaining commands, 
+    /// If returns false, will skip this write. Useful when chaining commands,
     /// instead of breaking chain to insert if statement.
     /// </param>
-    /// <param name="text">Line or lines to output</param>
+    /// <param name="text">Line or lines to output.</param>
     /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
     /// <returns>This instance to allow chaining.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public CodeStringBuilder WriteLineIf (Func<bool> predicate, string? text, IndentControl indentControl)
+    public CodeStringBuilder WriteLineIf(Func<bool> predicate, string? text, IndentControl indentControl)
         => predicate() ? WriteLine(text, indentControl) : this;
 
     /// <summary>
     /// Write line(s) if <paramref name="predicate"/> is true.
     /// </summary>
     /// <param name="predicate">
-    /// If returns false, will skip this write. Useful when chaining commands, 
+    /// If returns false, will skip this write. Useful when chaining commands,
     /// instead of breaking chain to insert if statement.
     /// </param>
-    /// <param name="text">Line or lines to output</param>
+    /// <param name="text">Line or lines to output.</param>
     /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
     /// <returns>This instance to allow chaining.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public CodeStringBuilder WriteLineIf (Func<bool> predicate, Func<string?> text, IndentControl indentControl)
+    public CodeStringBuilder WriteLineIf(Func<bool> predicate, Func<string?> text, IndentControl indentControl)
         => predicate() ? WriteLine(text(), indentControl) : this;
 
     /// <summary>
-    /// Write line(s)
+    /// Write line(s).
     /// </summary>
-    /// <param name="text">Line or lines to output</param>
+    /// <param name="text">Line or lines to output.</param>
     /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
     /// <returns>This instance to allow chaining.</returns>
-    public CodeStringBuilder WriteLine (string? text, IndentControl indentControl)
+    public CodeStringBuilder WriteLine(string? text, IndentControl indentControl)
     {
         if (text is null || text.Length == 0)
         {
-            _pendingBlankLine = false;
-            _lastLineWasBlank = true;
-            _ = _stringBuilder.AppendLine();
+            pendingBlankLine = false;
+            lastLineWasBlank = true;
+            _ = stringBuilder.AppendLine();
             return this;
         }
 
@@ -348,20 +350,15 @@ public class CodeStringBuilder
             case IndentControl.BlankLineOnly:
                 if (FirstLineIsWhitespace(text))
                 {
-                    _pendingBlankLine = false;
+                    pendingBlankLine = false;
                 }
                 else
                 {
                     DoPendingBlankLine();
                 }
 
-                _ = _stringBuilder.AppendLine(text);
-                _lastLineWasBlank = LineStartsOnlyWithWhitespace(text, text.Length - 1);
-                break;
-
-            case IndentControl.None:
-                _ = _stringBuilder.AppendLine(text);
-                _lastLineWasBlank = LineStartsOnlyWithWhitespace(text, text.Length - 1);
+                _ = stringBuilder.AppendLine(text);
+                lastLineWasBlank = LineStartsOnlyWithWhitespace(text, text.Length - 1);
                 break;
 
             case IndentControl.Auto:
@@ -408,7 +405,7 @@ public class CodeStringBuilder
                 if (!hasMultipleLines)
                 {
                     // ── Single non-blank line: bracket detection ──
-                    if (_pendingBlankLine && firstContentLine == 0)
+                    if (pendingBlankLine && firstContentLine == 0)
                     {
                         ReadOnlySpan<char> firstLine = lines[0];
                         bool lineWillTriggerOff = ForceIndentOff != '\0'
@@ -425,21 +422,21 @@ public class CodeStringBuilder
                     {
                         if (string.IsNullOrWhiteSpace(line))
                         {
-                            _pendingBlankLine = false;
-                            _lastLineWasBlank = true;
-                            _ = _stringBuilder.AppendLine();
+                            pendingBlankLine = false;
+                            lastLineWasBlank = true;
+                            _ = stringBuilder.AppendLine();
                             continue;
                         }
 
                         if (line[0] == NoIndentChar && NoIndentChar != '\0')
                         {
-                            _lastLineWasBlank = false;
-                            _ = _stringBuilder.AppendLine(line);
+                            lastLineWasBlank = false;
+                            _ = stringBuilder.AppendLine(line);
                             continue;
                         }
 
-                        _lastLineWasBlank = false;
-                        _ = _stringBuilder.Append(CurrentIndent)
+                        lastLineWasBlank = false;
+                        _ = stringBuilder.Append(CurrentIndent)
                                           .AppendLine(line);
                     }
 
@@ -499,7 +496,7 @@ public class CodeStringBuilder
                         Indents -= baseIndents;
                     }
 
-                    if (_pendingBlankLine)
+                    if (pendingBlankLine)
                     {
                         ReadOnlySpan<char> firstLine = lines[0];
                         if (!firstLine.IsWhiteSpace())
@@ -512,22 +509,22 @@ public class CodeStringBuilder
                     {
                         if (string.IsNullOrWhiteSpace(line))
                         {
-                            _pendingBlankLine = false;
-                            _lastLineWasBlank = true;
-                            _ = _stringBuilder.AppendLine();
+                            pendingBlankLine = false;
+                            lastLineWasBlank = true;
+                            _ = stringBuilder.AppendLine();
                             continue;
                         }
 
                         if (line.Length > 0 && line[0] == NoIndentChar && NoIndentChar != '\0')
                         {
-                            _lastLineWasBlank = false;
-                            _ = _stringBuilder.AppendLine(line);
+                            lastLineWasBlank = false;
+                            _ = stringBuilder.AppendLine(line);
                             continue;
                         }
 
                         // Output indent = current level adjusted by the line's offset from base.
-                        _lastLineWasBlank = false;
-                        _ = _stringBuilder.Append(CurrentIndent)
+                        lastLineWasBlank = false;
+                        _ = stringBuilder.Append(CurrentIndent)
                                           .AppendLine(line);
                     }
 
@@ -549,9 +546,9 @@ public class CodeStringBuilder
 
                     if (line.Length == 0)
                     {
-                        _pendingBlankLine = false;
-                        _lastLineWasBlank = true;
-                        _ = _stringBuilder.AppendLine();
+                        pendingBlankLine = false;
+                        lastLineWasBlank = true;
+                        _ = stringBuilder.AppendLine();
                         continue;
                     }
 
@@ -561,9 +558,9 @@ public class CodeStringBuilder
 
                     if (effectiveSpan.IsEmpty)
                     {
-                        _pendingBlankLine = false;
-                        _lastLineWasBlank = true;
-                        _ = _stringBuilder.AppendLine();
+                        pendingBlankLine = false;
+                        lastLineWasBlank = true;
+                        _ = stringBuilder.AppendLine();
 
                         if (postWriteChange != 0)
                         {
@@ -578,9 +575,9 @@ public class CodeStringBuilder
                     if (effectiveSpan[0] == NoIndentChar && NoIndentChar != '\0')
                     {
                         DoPendingBlankLine();
-                        _lastLineWasBlank = false;
+                        lastLineWasBlank = false;
                         string noIndentLine = effectiveSpan.Length == line.Length ? line : effectiveSpan.ToString();
-                        _ = _stringBuilder.AppendLine(noIndentLine);
+                        _ = stringBuilder.AppendLine(noIndentLine);
                         DoPostWriteChanges(postWriteChange, lineTriggeredOff, lineTriggeredBlankPost);
                         continue;
                     }
@@ -590,9 +587,9 @@ public class CodeStringBuilder
                         DoPendingBlankLine();
                     }
 
-                    _lastLineWasBlank = false;
+                    lastLineWasBlank = false;
                     string effectiveLine = effectiveSpan.Length == line.Length ? line : effectiveSpan.ToString();
-                    _ = _stringBuilder.Append(CurrentIndent)
+                    _ = stringBuilder.Append(CurrentIndent)
                                       .AppendLine(effectiveLine);
 
                     DoPostWriteChanges(postWriteChange, lineTriggeredOff, lineTriggeredBlankPost);
@@ -600,13 +597,76 @@ public class CodeStringBuilder
 
                 break;
             }
+
+            case IndentControl.None:
+            default:
+                _ = stringBuilder.AppendLine(text);
+                lastLineWasBlank = LineStartsOnlyWithWhitespace(text, text.Length - 1);
+                break;
         }
 
         return this;
     }
 
+    /// <summary>
+    /// This checks if only whitespace exist starting at x for the line x is on.
+    /// </summary>
+    /// <param name="str">The text to scan.</param>
+    /// <param name="x">Index of the char to start scanning backwards from.</param>
+    /// <returns>True if only whitespace from the start of the line x is on until and including x.</returns>
+    private static bool LineStartsOnlyWithWhitespace(ReadOnlySpan<char> str, int x)
+    {
+        for (int i = x; i >= 0; i--)
+        {
+            char c = str[i];
+
+            // If we find new line then we can stop checking
+            // This will also cover \r\n as will hit \n first
+            if (c is '\n')
+            {
+                return true;
+            }
+
+            if (!char.IsWhiteSpace(c))
+            {
+                return false;
+            }
+        }
+
+        // So checked all chars without finding a non-whitespace
+        // so it is a success
+        return true;
+    }
+
+    /// <summary>
+    /// Scans forward from the start of <paramref name="str"/> until the first newline
+    /// or the end of the string, returning <see langword="true"/> if every character
+    /// in that first line is whitespace (i.e. the first line is blank or whitespace-only).
+    /// </summary>
+    private static bool FirstLineIsWhitespace(ReadOnlySpan<char> str)
+    {
+        for (int i = 0; i < str.Length; i++)
+        {
+            char c = str[i];
+
+            // Hit a newline before any non-whitespace — first line is blank/whitespace-only
+            if (c is '\n')
+            {
+                return true;
+            }
+
+            if (!char.IsWhiteSpace(c))
+            {
+                return false;
+            }
+        }
+
+        // Reached end without a newline and without a non-whitespace char
+        return true;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DoPostWriteChanges (int postWriteChange, bool lineTriggeredOff, bool lineTriggeredBlankPost)
+    private void DoPostWriteChanges(int postWriteChange, bool lineTriggeredOff, bool lineTriggeredBlankPost)
     {
         if (postWriteChange != 0)
         {
@@ -615,12 +675,12 @@ public class CodeStringBuilder
 
         if (lineTriggeredOff)
         {
-            _pendingBlankLine = ForceBlankLineAfterOff;
+            pendingBlankLine = ForceBlankLineAfterOff;
         }
 
         if (lineTriggeredBlankPost)
         {
-            _pendingBlankLine = true;
+            pendingBlankLine = true;
         }
     }
 
@@ -628,13 +688,13 @@ public class CodeStringBuilder
     /// Counts the number of complete indent levels (each <see cref="IndentSize"/> copies of
     /// <see cref="IndentChar"/>) at the start of <paramref name="line"/>.
     /// </summary>
-    /// <param name="line">Line to check</param>
+    /// <param name="line">Line to check.</param>
     /// <param name="maxIndents">Max number of indents you care about. &lt;=0 to have no max.</param>
-    private int CountIndents (string line, int maxIndents = 0)
+    private int CountIndents(string line, int maxIndents = 0)
     {
         int indents = 0;
         int start = 0;
-        int end = IndentSize -1;
+        int end = IndentSize - 1;
         while (end < line.Length)
         {
             for (int s = start; s <= end; s++)
@@ -666,7 +726,7 @@ public class CodeStringBuilder
     /// Processes multiple control chars at the end of the text, consuming them in reverse
     /// until a non-control char (or ForceIndentOn/Off) is reached.
     /// </summary>
-    /// <param name="text">Text to check</param>
+    /// <param name="text">Text to check.</param>
     /// <param name="postWriteIndentChange">Outputs the number that should be added to <see cref="Indents"/> after writing this text.</param>
     /// <param name="triggeredOff">Outputs whether the last line was <see cref="ForceIndentOff"/> and needs to be actioned after write.</param>
     /// <param name="triggeredBlankPost">Outputs whether <see cref="BlankLinePost"/> was seen and a blank line should be queued after write.</param>
@@ -676,7 +736,7 @@ public class CodeStringBuilder
     /// chars are consumed. Used by the multi-line Auto path which derives indent changes
     /// from the delta between the first and last line instead.
     /// </param>
-    private ReadOnlySpan<char> ProcessControlChars (ReadOnlySpan<char> text, out int postWriteIndentChange, out bool triggeredOff, out bool triggeredBlankPost, bool processBrackets = true)
+    private ReadOnlySpan<char> ProcessControlChars(ReadOnlySpan<char> text, out int postWriteIndentChange, out bool triggeredOff, out bool triggeredBlankPost, bool processBrackets = true)
     {
         postWriteIndentChange = 0;
         triggeredOff = false;
@@ -709,7 +769,7 @@ public class CodeStringBuilder
                     break;
 
                 case BlankLinePre:
-                    _pendingBlankLine = true;
+                    pendingBlankLine = true;
                     break;
 
                 case BlankLinePost:
@@ -744,74 +804,17 @@ public class CodeStringBuilder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DoPendingBlankLine ()
+    private void DoPendingBlankLine()
     {
-        if (_pendingBlankLine)
+        if (pendingBlankLine)
         {
-            _pendingBlankLine = false;
+            pendingBlankLine = false;
 
-            if (_stringBuilder.Length > 0 && !_lastLineWasBlank)
+            if (stringBuilder.Length > 0 && !lastLineWasBlank)
             {
-                _lastLineWasBlank = true;
-                _ = _stringBuilder.AppendLine();
+                lastLineWasBlank = true;
+                _ = stringBuilder.AppendLine();
             }
         }
-    }
-
-    /// <summary>
-    /// This checks if only whitespace exist starting at x for the line x is on.
-    /// </summary>
-    /// <param name="str">The text to scan.</param>
-    /// <param name="x">Index of the char to start scanning backwards from.</param>
-    /// <returns>True if only whitespace from the start of the line x is on until and including x</returns>
-    private static bool LineStartsOnlyWithWhitespace (ReadOnlySpan<char> str, int x)
-    {
-        for (int i = x; i >= 0; i--)
-        {
-            char c = str[i];
-
-            // If we find new line then we can stop checking
-            // This will also cover \r\n as will hit \n first
-            if (c is '\n')
-            {
-                return true;
-            }
-
-            if (!char.IsWhiteSpace(c))
-            {
-                return false;
-            }
-        }
-
-        // So checked all chars without finding a non-whitespace
-        // so it is a success
-        return true;
-    }
-
-    /// <summary>
-    /// Scans forward from the start of <paramref name="str"/> until the first newline
-    /// or the end of the string, returning <see langword="true"/> if every character
-    /// in that first line is whitespace (i.e. the first line is blank or whitespace-only).
-    /// </summary>
-    private static bool FirstLineIsWhitespace (ReadOnlySpan<char> str)
-    {
-        for (int i = 0; i < str.Length; i++)
-        {
-            char c = str[i];
-
-            // Hit a newline before any non-whitespace — first line is blank/whitespace-only
-            if (c is '\n')
-            {
-                return true;
-            }
-
-            if (!char.IsWhiteSpace(c))
-            {
-                return false;
-            }
-        }
-
-        // Reached end without a newline and without a non-whitespace char
-        return true;
     }
 }

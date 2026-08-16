@@ -4,7 +4,7 @@ namespace Gori.CodeStringBuilder.Testing;
 
 public class AutoTestData : IEnumerable<TheoryDataRow<string, string?[]>>
 {
-    public IEnumerator<TheoryDataRow<string, string?[]>> GetEnumerator ()
+    public IEnumerator<TheoryDataRow<string, string?[]>> GetEnumerator()
     {
         // Base indent of the written text is stripped before the builder's current
         // indent is applied, so pre-indented text is normalised correctly.
@@ -143,5 +143,5 @@ public class AutoTestData : IEnumerable<TheoryDataRow<string, string?[]>>
         };
     }
 
-    IEnumerator IEnumerable.GetEnumerator () => GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

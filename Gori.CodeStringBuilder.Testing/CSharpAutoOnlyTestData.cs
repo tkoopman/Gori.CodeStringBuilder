@@ -4,7 +4,7 @@ namespace Gori.CodeStringBuilder.Testing;
 
 public class CSharpAutoOnlyTestData : IEnumerable<TheoryDataRow<string, string?[]>>
 {
-    public IEnumerator<TheoryDataRow<string, string?[]>> GetEnumerator ()
+    public IEnumerator<TheoryDataRow<string, string?[]>> GetEnumerator()
     {
         yield return new TheoryDataRow<string, string?[]>("""
         Line 1
@@ -75,5 +75,5 @@ public class CSharpAutoOnlyTestData : IEnumerable<TheoryDataRow<string, string?[
             Label = "Single multi-lined write random formatting",
         };
     }
-    IEnumerator IEnumerable.GetEnumerator () => GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
