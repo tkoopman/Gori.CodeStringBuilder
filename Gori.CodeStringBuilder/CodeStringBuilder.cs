@@ -1,10 +1,11 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Gori.CodeStringBuilder;
 
 /// <summary>
-/// A simple class for helping output text with line indentations.
+/// A simple class for helping output text with line indentations and variables.
 /// This is not a full re-formatter, just basic helper for use in source generators.
 /// </summary>
 public class CodeStringBuilder
@@ -74,6 +75,7 @@ public class CodeStringBuilder
     private readonly StringBuilder stringBuilder = new();
     private bool pendingBlankLine;
     private bool lastLineWasBlank;
+    private Regex? variableRegex = new(@"\$\{(?<name>[a-zA-Z0-9_]+)\}", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>
     /// Gets char used for indents.
@@ -84,6 +86,29 @@ public class CodeStringBuilder
     /// Gets how to apply indents by default. Can be overridden using <see cref="WriteLine(string?, IndentControl)"/> if required.
     /// </summary>
     public IndentControl IndentControl { get; init; } = IndentControl.Auto;
+
+    /// <summary>
+    /// Gets default variables to use when adding string with variables.
+    /// NOTE: If you want variables to be case-insensitive, use a case-insensitive dictionary.
+    ///
+    /// These will be used if no matching variable is found in the variables parameter (missing key or is null) of Write methods.
+    /// </summary>
+    public IReadOnlyDictionary<string, string>? DefaultVariables { get; init; }
+
+    /// <summary>
+    /// Gets pattern to use when adding string with variables.
+    /// Default is ${name} where name can be any combination of a-z, A-Z, 0-9 and _.
+    ///
+    /// Set to null to disable variable replacement.
+    ///
+    /// NOTE: MUST contain a named group "name" that will be used to lookup the variable in the dictionary.
+    /// </summary>
+    public string? VariablePattern
+    {
+        get => variableRegex?.ToString();
+
+        init => variableRegex = value is not null ? new Regex(value, RegexOptions.Compiled | RegexOptions.CultureInvariant) : null;
+    }
 
     /// <summary>
     /// Gets or sets current indent depth. Actual indent added will be Indents x IndentSize.
@@ -210,16 +235,17 @@ public class CodeStringBuilder
     /// <returns>This instance to allow chaining.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CodeStringBuilder WriteLine()
-        => WriteLine(null, IndentControl);
+        => WriteLine(null, null, IndentControl);
 
-    /// <summary>
-    /// Write line(s).
-    /// </summary>
-    /// <param name="text">Line or lines to output.</param>
-    /// <returns>This instance to allow chaining.</returns>
+    /// <inheritdoc cref="WriteLine(string?, IReadOnlyDictionary{string, string}?, IndentControl)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CodeStringBuilder WriteLine(string? text)
-        => WriteLine(text, IndentControl);
+        => WriteLine(text, null, IndentControl);
+
+    /// <inheritdoc cref="WriteLine(string?, IReadOnlyDictionary{string, string}?, IndentControl)"/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CodeStringBuilder WriteLine(string? text, IReadOnlyDictionary<string, string>? variables)
+        => WriteLine(text, variables, IndentControl);
 
     /// <summary>
     /// Write line(s) if <paramref name="doWrite"/> is true.
@@ -229,51 +255,53 @@ public class CodeStringBuilder
     /// instead of breaking chain to insert if statement.
     /// </param>
     /// <param name="text">Line or lines to output.</param>
+    /// <param name="variables">
+    /// Dictionary of variable names and their replacement values.
+    /// Variables in the text are replaced using the pattern defined by <see cref="VariablePattern"/>.
+    /// NOTE: If you want variables to be case-insensitive, use a case-insensitive dictionary.
+    ///
+    /// Any VariablePattern without a matching key in this dictionary and <see cref="DefaultVariables"/> will be left unchanged in the output.
+    /// </param>
+    /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
     /// <returns>This instance to allow chaining.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CodeStringBuilder WriteLineIf(bool doWrite, Func<string?> text, IReadOnlyDictionary<string, string>? variables, IndentControl indentControl)
+        => doWrite ? WriteLine(text(), variables, indentControl) : this;
+
+    /// <inheritdoc cref="WriteLineIf(bool, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CodeStringBuilder WriteLineIf(bool doWrite, string? text)
-        => doWrite ? WriteLine(text, IndentControl) : this;
+        => doWrite ? WriteLine(text, null, IndentControl) : this;
 
-    /// <summary>
-    /// Write line(s) if <paramref name="doWrite"/> is true.
-    /// </summary>
-    /// <param name="doWrite">
-    /// If false, will skip this write. Useful when chaining commands,
-    /// instead of breaking chain to insert if statement.
-    /// </param>
-    /// <param name="text">Line or lines to output.</param>
-    /// <returns>This instance to allow chaining.</returns>
+    /// <inheritdoc cref="WriteLineIf(bool, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CodeStringBuilder WriteLineIf(bool doWrite, string? text, IReadOnlyDictionary<string, string>? variables)
+        => doWrite ? WriteLine(text, variables, IndentControl) : this;
+
+    /// <inheritdoc cref="WriteLineIf(bool, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CodeStringBuilder WriteLineIf(bool doWrite, Func<string?> text)
-        => doWrite ? WriteLine(text(), IndentControl) : this;
+        => doWrite ? WriteLine(text(), null, IndentControl) : this;
 
-    /// <summary>
-    /// Write line(s) if <paramref name="doWrite"/> is true.
-    /// </summary>
-    /// <param name="doWrite">
-    /// If false, will skip this write. Useful when chaining commands,
-    /// instead of breaking chain to insert if statement.
-    /// </param>
-    /// <param name="text">Line or lines to output.</param>
-    /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
-    /// <returns>This instance to allow chaining.</returns>
+    /// <inheritdoc cref="WriteLineIf(bool, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CodeStringBuilder WriteLineIf(bool doWrite, Func<string?> text, IReadOnlyDictionary<string, string>? variables)
+        => doWrite ? WriteLine(text(), variables, IndentControl) : this;
+
+    /// <inheritdoc cref="WriteLineIf(bool, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CodeStringBuilder WriteLineIf(bool doWrite, string? text, IndentControl indentControl)
-        => doWrite ? WriteLine(text, indentControl) : this;
+        => doWrite ? WriteLine(text, null, indentControl) : this;
 
-    /// <summary>
-    /// Write line(s) if <paramref name="doWrite"/> is true.
-    /// </summary>
-    /// <param name="doWrite">
-    /// If false, will skip this write. Useful when chaining commands,
-    /// instead of breaking chain to insert if statement.
-    /// </param>
-    /// <param name="text">Line or lines to output.</param>
-    /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
-    /// <returns>This instance to allow chaining.</returns>
+    /// <inheritdoc cref="WriteLineIf(bool, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CodeStringBuilder WriteLineIf(bool doWrite, string? text, IReadOnlyDictionary<string, string>? variables, IndentControl indentControl)
+        => doWrite ? WriteLine(text, variables, indentControl) : this;
+
+    /// <inheritdoc cref="WriteLineIf(bool, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CodeStringBuilder WriteLineIf(bool doWrite, Func<string?> text, IndentControl indentControl)
-        => doWrite ? WriteLine(text(), indentControl) : this;
+        => doWrite ? WriteLine(text(), null, indentControl) : this;
 
     /// <summary>
     /// Write line(s) if <paramref name="predicate"/> is true.
@@ -283,59 +311,73 @@ public class CodeStringBuilder
     /// instead of breaking chain to insert if statement.
     /// </param>
     /// <param name="text">Line or lines to output.</param>
+    /// <param name="variables">
+    /// Dictionary of variable names and their replacement values.
+    /// Variables in the text are replaced using the pattern defined by <see cref="VariablePattern"/>.
+    /// NOTE: If you want variables to be case-insensitive, use a case-insensitive dictionary.
+    ///
+    /// Any VariablePattern without a matching key in this dictionary and <see cref="DefaultVariables"/> will be left unchanged in the output.
+    /// </param>
+    /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
     /// <returns>This instance to allow chaining.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CodeStringBuilder WriteLineIf(Func<bool> predicate, Func<string?> text, IReadOnlyDictionary<string, string>? variables, IndentControl indentControl)
+        => predicate() ? WriteLine(text(), variables, indentControl) : this;
+
+    /// <inheritdoc cref="WriteLineIf(Func{bool}, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CodeStringBuilder WriteLineIf(Func<bool> predicate, string? text)
-        => predicate() ? WriteLine(text, IndentControl) : this;
+        => predicate() ? WriteLine(text, null, IndentControl) : this;
 
-    /// <summary>
-    /// Write line(s) if <paramref name="predicate"/> is true.
-    /// </summary>
-    /// <param name="predicate">
-    /// If returns false, will skip this write. Useful when chaining commands,
-    /// instead of breaking chain to insert if statement.
-    /// </param>
-    /// <param name="text">Line or lines to output.</param>
-    /// <returns>This instance to allow chaining.</returns>
+    /// <inheritdoc cref="WriteLineIf(Func{bool}, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CodeStringBuilder WriteLineIf(Func<bool> predicate, string? text, IReadOnlyDictionary<string, string>? variables)
+        => predicate() ? WriteLine(text, variables, IndentControl) : this;
+
+    /// <inheritdoc cref="WriteLineIf(Func{bool}, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CodeStringBuilder WriteLineIf(Func<bool> predicate, Func<string?> text, IReadOnlyDictionary<string, string>? variables)
+        => predicate() ? WriteLine(text(), variables, IndentControl) : this;
+
+    /// <inheritdoc cref="WriteLineIf(Func{bool}, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CodeStringBuilder WriteLineIf(Func<bool> predicate, Func<string?> text)
-        => predicate() ? WriteLine(text(), IndentControl) : this;
+        => predicate() ? WriteLine(text(), null, IndentControl) : this;
 
-    /// <summary>
-    /// Write line(s) if <paramref name="predicate"/> is true.
-    /// </summary>
-    /// <param name="predicate">
-    /// If returns false, will skip this write. Useful when chaining commands,
-    /// instead of breaking chain to insert if statement.
-    /// </param>
-    /// <param name="text">Line or lines to output.</param>
-    /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
-    /// <returns>This instance to allow chaining.</returns>
+    /// <inheritdoc cref="WriteLineIf(Func{bool}, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CodeStringBuilder WriteLineIf(Func<bool> predicate, string? text, IndentControl indentControl)
-        => predicate() ? WriteLine(text, indentControl) : this;
+        => predicate() ? WriteLine(text, null, indentControl) : this;
 
-    /// <summary>
-    /// Write line(s) if <paramref name="predicate"/> is true.
-    /// </summary>
-    /// <param name="predicate">
-    /// If returns false, will skip this write. Useful when chaining commands,
-    /// instead of breaking chain to insert if statement.
-    /// </param>
-    /// <param name="text">Line or lines to output.</param>
-    /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
-    /// <returns>This instance to allow chaining.</returns>
+    /// <inheritdoc cref="WriteLineIf(Func{bool}, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CodeStringBuilder WriteLineIf(Func<bool> predicate, string? text, IReadOnlyDictionary<string, string>? variables, IndentControl indentControl)
+        => predicate() ? WriteLine(text, variables, indentControl) : this;
+
+    /// <inheritdoc cref="WriteLineIf(Func{bool}, Func{string?}, IReadOnlyDictionary{string, string}?, IndentControl)"/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CodeStringBuilder WriteLineIf(Func<bool> predicate, Func<string?> text, IndentControl indentControl)
-        => predicate() ? WriteLine(text(), indentControl) : this;
+        => predicate() ? WriteLine(text(), null, indentControl) : this;
+
+    /// <inheritdoc cref="WriteLine(string?, IReadOnlyDictionary{string, string}?, IndentControl)"/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public CodeStringBuilder WriteLine(string? text, IndentControl indentControl)
+     => WriteLine(text, null, indentControl);
 
     /// <summary>
     /// Write line(s).
     /// </summary>
     /// <param name="text">Line or lines to output.</param>
+    /// <param name="variables">
+    /// Dictionary of variable names and their replacement values.
+    /// Variables in the text are replaced using the pattern defined by <see cref="VariablePattern"/>.
+    /// NOTE: If you want variables to be case-insensitive, use a case-insensitive dictionary.
+    ///
+    /// Any VariablePattern without a matching key in this dictionary and <see cref="DefaultVariables"/> will be left unchanged in the output.
+    /// </param>
     /// <param name="indentControl">Controls how indentation is applied. Overrides the instance default for this call.</param>
     /// <returns>This instance to allow chaining.</returns>
-    public CodeStringBuilder WriteLine(string? text, IndentControl indentControl)
+    public CodeStringBuilder WriteLine(string? text, IReadOnlyDictionary<string, string>? variables, IndentControl indentControl)
     {
         if (text is null || text.Length == 0)
         {
@@ -343,6 +385,17 @@ public class CodeStringBuilder
             lastLineWasBlank = true;
             _ = stringBuilder.AppendLine();
             return this;
+        }
+
+        if (variableRegex is not null && (DefaultVariables is not null || variables is not null))
+        {
+            text = variableRegex.Replace(text, match =>
+            {
+                string varName = match.Groups["name"].Value;
+                return variables is not null && variables.TryGetValue(varName, out string? replacement) ? replacement
+                     : DefaultVariables is not null && DefaultVariables.TryGetValue(varName, out replacement) ? replacement
+                     : match.Value;
+            });
         }
 
         switch (indentControl)

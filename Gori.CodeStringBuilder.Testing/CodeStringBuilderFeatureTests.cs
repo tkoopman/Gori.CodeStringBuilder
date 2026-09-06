@@ -1242,4 +1242,145 @@ public class CodeStringBuilderFeatureTests(ITestOutputHelper output)
 
         Assert.Equal("content\r\n\r\nnext\r\n", result, ignoreLineEndingDifferences: true);
     }
+
+    [Fact]
+    public void Variables_ValidReplacements_SingularAndMultiple()
+    {
+        var sb = new CodeStringBuilder();
+        _ = sb.WriteLine("Hello ${name}", new Dictionary<string, string> { ["name"] = "World" });
+        _ = sb.WriteLine("Coords:${x}${y}", new Dictionary<string, string> { ["x"] = "1", ["y"] = "2" });
+
+        string result = sb.ToString();
+        output.WriteLine(result);
+
+        Assert.Equal("Hello World\r\nCoords:12\r\n", result, ignoreLineEndingDifferences: true);
+    }
+
+    [Fact]
+    public void Variables_PatternFound_NoMatchingValue_LeftUnchanged()
+    {
+        var sb = new CodeStringBuilder();
+        // Provide an empty variables dictionary so the pattern is evaluated but no replacement is found
+        _ = sb.WriteLine("Missing: ${notfound}", new Dictionary<string, string>());
+
+        string result = sb.ToString();
+        output.WriteLine(result);
+
+        // The variable should be left unchanged because there is no matching key in the provided dictionary
+        Assert.Equal("Missing: ${notfound}\r\n", result, ignoreLineEndingDifferences: true);
+    }
+
+    [Fact]
+    public void Variables_CustomPattern_Used()
+    {
+        var sb = new CodeStringBuilder
+        {
+            // Use a custom pattern of the form #(name)
+            VariablePattern = "\\#\\((?<name>[a-zA-Z0-9_]+)\\)"
+        };
+
+        _ = sb.WriteLine("Custom: #(name)", new Dictionary<string, string> { ["name"] = "Alice" });
+
+        string result = sb.ToString();
+        output.WriteLine(result);
+
+        Assert.Equal("Custom: Alice\r\n", result, ignoreLineEndingDifferences: true);
+    }
+
+    [Fact]
+    public void Variables_UsesDefaultVariables_WhenMethodParamNull()
+    {
+        var sb = new CodeStringBuilder
+        {
+            DefaultVariables = new Dictionary<string, string> { ["who"] = "Default" }
+        };
+
+        // Call overload that does not pass variables (null), DefaultVariables should be used
+        _ = sb.WriteLine("Hi ${who}");
+
+        string result = sb.ToString();
+        output.WriteLine(result);
+
+        Assert.Equal("Hi Default\r\n", result, ignoreLineEndingDifferences: true);
+    }
+
+    [Fact]
+    public void Variables_DefaultAndMethodParam_MissingKeysFromParam_AreTakenFromDefault()
+    {
+        var sb = new CodeStringBuilder
+        {
+            DefaultVariables = new Dictionary<string, string> { ["b"] = "B" }
+        };
+
+        // Provide only 'a' in method param; 'b' should be resolved from DefaultVariables
+        _ = sb.WriteLine("AB:${a}${b}", new Dictionary<string, string> { ["a"] = "A" });
+
+        string result = sb.ToString();
+        output.WriteLine(result);
+
+        Assert.Equal("AB:AB\r\n", result, ignoreLineEndingDifferences: true);
+    }
+
+    [Fact]
+    public void Variables_MethodParamOverridesDefault_WhenBothPresent()
+    {
+        var sb = new CodeStringBuilder
+        {
+            DefaultVariables = new Dictionary<string, string> { ["x"] = "DefaultX", ["y"] = "DefaultY" }
+        };
+
+        // Provide 'x' in method param which should override DefaultVariables; 'y' comes from default
+        _ = sb.WriteLine("XY:${x}-${y}", new Dictionary<string, string> { ["x"] = "ParamX" });
+
+        string result = sb.ToString();
+        output.WriteLine(result);
+
+        Assert.Equal("XY:ParamX-DefaultY\r\n", result, ignoreLineEndingDifferences: true);
+    }
+
+    [Fact]
+    public void Variables_ReplacedWithEmptyString_Removed()
+    {
+        var sb = new CodeStringBuilder();
+
+        _ = sb.WriteLine("A${v}B", new Dictionary<string, string> { ["v"] = string.Empty });
+
+        string result = sb.ToString();
+        output.WriteLine(result);
+
+        Assert.Equal("AB\r\n", result, ignoreLineEndingDifferences: true);
+    }
+
+    [Fact]
+    public void Variables_MultiLineCSharp_IsFormattedAccordingToIndentControl()
+    {
+        var sb = CodeStringBuilder.CreateCSharpBuilder();
+
+        _ = sb.WriteLine("class Foo");
+        _ = sb.WriteLine("{");
+
+        _ = sb.WriteLine("${method}", new Dictionary<string, string>
+        {
+            ["method"] = "public void Method()\n{\n// Do stuff\n}"
+        }, IndentControl.FullAuto);
+
+        _ = sb.WriteLine("}");
+
+        string result = sb.ToString();
+        output.WriteLine(result);
+
+        Assert.Equal(
+            """
+            class Foo
+            {
+                public void Method()
+                {
+                    // Do stuff
+                }
+            }
+
+            """,
+            result,
+            ignoreLineEndingDifferences: true);
+    }
 }

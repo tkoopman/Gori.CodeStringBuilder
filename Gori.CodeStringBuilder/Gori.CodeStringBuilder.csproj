@@ -7,10 +7,11 @@
     <LangVersion>latest</LangVersion>
     <PackageLicenseExpression>MIT-0</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Description>Basic string builder which helps manage indents and blank lines. Designed for use with source generators.</Description>
+    <Description>Basic string builder which helps manage indents, blank lines and variables. Designed for use with source generators.</Description>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>CodeStringBuilder</Title>
+    <Version>1.1.0</Version>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
