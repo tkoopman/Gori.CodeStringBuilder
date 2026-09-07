@@ -50,6 +50,8 @@ var sb = CodeStringBuilder.CreateCSharpBuilder();
 | `IndentChar` | `char` | `' '` | Character used to build each indent level. |
 | `IndentSize` | `int` | `4` | Number of `IndentChar` characters per indent level. |
 | `IndentControl` | `IndentControl` | `Auto` | Default indentation mode for `WriteLine` calls. |
+| `DefaultVariables` | `IReadOnlyDictionary<string, string>?` | `null` | Default variable values used by write methods when a key is missing from per-call variables (or when per-call variables are omitted). |
+| `VariablePattern` | `string?` | `@"\$\{(?<name>[a-zA-Z0-9_]+)\}"` | Regex pattern for variable tokens. Must include a named capture group `name`. Set to `null` to disable variable replacement. |
 | `Indents` | `int` | `0` | Current indent depth. Clamped to zero if set negative. |
 | `NoIndentChar` | `char` | `'\0'` (off) | Lines starting with this character are written without indentation. Control chars at the end of the line are still processed. |
 | `ForceIndentOn` | `char` | `'\0'` (off) | A line whose only non-whitespace content is this character increases the indent level for the next line. |
@@ -121,6 +123,53 @@ sb.WriteLine($"}}{CodeStringBuilder.Decrease}{CodeStringBuilder.BlankLinePost}")
 
 ---
 
+## Variables
+
+Variable replacement is supported on all `WriteLine` and `WriteLineIf` overloads that accept a `variables` dictionary.
+
+Default token format is `${name}` where `name` matches `[a-zA-Z0-9_]+`.
+
+Resolution order for each token:
+
+1. Per-call `variables` dictionary
+2. `DefaultVariables` on the builder
+3. Leave token unchanged if no value is found
+
+```csharp
+var sb = new CodeStringBuilder
+{
+    DefaultVariables = new Dictionary<string, string>
+    {
+        ["namespace"] = "MyApp",
+        ["access"] = "public"
+    }
+};
+
+sb.WriteLine("namespace ${namespace}")
+  .WriteLine("${access} class ${name}", new Dictionary<string, string>
+  {
+      ["name"] = "Widget"
+  });
+```
+
+You can override the token syntax using `VariablePattern` (must include a named group `name`):
+
+```csharp
+var sb = new CodeStringBuilder
+{
+    VariablePattern = "\\#\\((?<name>[a-zA-Z0-9_]+)\\)"
+};
+
+sb.WriteLine("Hello #(user)", new Dictionary<string, string>
+{
+    ["user"] = "Alice"
+});
+```
+
+Set `VariablePattern = null` to disable replacements.
+
+---
+
 ## Blank line helpers
 
 ### `ForceBlankLine()`
@@ -168,11 +217,15 @@ sb.WriteLine();
 // Multi-line — newlines within the string are split and each line is handled individually
 sb.WriteLine("line one\nline two\nline three");
 
+// Single line with variables
+sb.WriteLine("Hello ${name}", new Dictionary<string, string> { ["name"] = "World" });
+
 // Conditional writes
 sb.WriteLineIf(() => condition, "optional line");
 sb.WriteLineIf(() => condition, () => ExpensiveString());
-sb.WriteLineIf(() => condition, "optional line", IndentControl.AddOnly);
-sb.WriteLineIf(() => condition, () => ExpensiveString(), IndentControl.AddOnly);
+sb.WriteLineIf(() => condition, "optional line", IndentControl.BlankLineOnly);
+sb.WriteLineIf(() => condition, () => ExpensiveString(), IndentControl.BlankLineOnly);
+sb.WriteLineIf(() => condition, "Hi ${who}", new Dictionary<string, string> { ["who"] = "Tim" });
 ```
 
 ### `Clear()`

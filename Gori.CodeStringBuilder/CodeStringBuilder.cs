@@ -186,9 +186,10 @@ public class CodeStringBuilder
     /// <summary>
     /// Constructs a new CodeStringBuilder configured for C#.
     /// </summary>
+    /// <param name="defaultVariables">Default variables to use in the builder.</param>
     /// <param name="fullAuto">Default IndentControl is <see cref="IndentControl.Auto"/>. Setting this to true will make it <see cref="IndentControl.FullAuto"/>.</param>
     /// <returns>CodeStringBuilder configured for C#.</returns>
-    public static CodeStringBuilder CreateCSharpBuilder(bool fullAuto = false) => new()
+    public static CodeStringBuilder CreateCSharpBuilder(IReadOnlyDictionary<string, string>? defaultVariables = null, bool fullAuto = false) => new()
     {
         IndentSize = 4,
         IndentChar = ' ',
@@ -197,6 +198,7 @@ public class CodeStringBuilder
         ForceIndentOff = '}',
         ForceBlankLineAfterOff = true,
         NoIndentChar = '#',
+        DefaultVariables = defaultVariables,
     };
 
     /// <summary>

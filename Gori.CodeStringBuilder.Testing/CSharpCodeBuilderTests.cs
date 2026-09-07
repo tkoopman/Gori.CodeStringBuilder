@@ -1,4 +1,4 @@
-﻿namespace Gori.CodeStringBuilder.Testing;
+namespace Gori.CodeStringBuilder.Testing;
 
 public class CSharpCodeBuilderTests(ITestOutputHelper output)
 {
@@ -49,7 +49,7 @@ public class CSharpCodeBuilderTests(ITestOutputHelper output)
     [ClassData(typeof(CSharpAutoOnlyTestData))]
     public void CSharpAutoTests(string expected, params string?[] lines)
     {
-        var sb = CodeStringBuilder.CreateCSharpBuilder(true);
+        var sb = CodeStringBuilder.CreateCSharpBuilder(fullAuto: true);
         foreach (string? line in lines)
         {
             _ = sb.WriteLine(line);
