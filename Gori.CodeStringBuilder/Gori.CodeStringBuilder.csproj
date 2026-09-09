@@ -10,10 +10,11 @@
     <Description>Basic string builder which helps manage indents, blank lines and variables. Designed for use with source generators.</Description>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Title>CodeStringBuilder</Title>
-    <Version>1.1.1</Version>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageOutputPath>..\..\LocalPackages</PackageOutputPath>
+    <Title>CodeStringBuilder</Title>
+    <Version>1.1.2</Version>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <Authors>Tim Koopman</Authors>

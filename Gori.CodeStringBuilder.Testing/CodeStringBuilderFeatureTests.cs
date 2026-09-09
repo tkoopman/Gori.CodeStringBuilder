@@ -1257,6 +1257,38 @@ public class CodeStringBuilderFeatureTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Variables_NestedVariable_ReplacesInnerVariable()
+    {
+        var sb = new CodeStringBuilder();
+        _ = sb.WriteLine("Value:${a}", new Dictionary<string, string>
+        {
+            ["a"] = "${b}",
+            ["b"] = "Inner"
+        });
+
+        string result = sb.ToString();
+        output.WriteLine(result);
+
+        Assert.Equal("Value:Inner\r\n", result, ignoreLineEndingDifferences: true);
+    }
+
+    [Fact]
+    public void Variables_CircularReference_StopsAtMaxDepth_LeavesVariableUnchanged()
+    {
+        var sb = new CodeStringBuilder();
+        // Self-referential variable should not recurse forever; after max depth it should be left unchanged
+        _ = sb.WriteLine("Loop:${x}", new Dictionary<string, string>
+        {
+            ["x"] = "${x}"
+        });
+
+        string result = sb.ToString();
+        output.WriteLine(result);
+
+        Assert.Equal("Loop:${x}\r\n", result, ignoreLineEndingDifferences: true);
+    }
+
+    [Fact]
     public void Variables_PatternFound_NoMatchingValue_LeftUnchanged()
     {
         var sb = new CodeStringBuilder();

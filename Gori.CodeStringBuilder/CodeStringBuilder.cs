@@ -10,6 +10,8 @@ namespace Gori.CodeStringBuilder;
 /// </summary>
 public class CodeStringBuilder
 {
+    private const int MaxRecursionDepth = 10;
+
     /// <summary>
     /// If this char is seen at end of a line it will increase the indent depth, including for this line.
     /// </summary>
@@ -366,6 +368,17 @@ public class CodeStringBuilder
     public CodeStringBuilder WriteLine(string? text, IndentControl indentControl)
      => WriteLine(text, null, indentControl);
 
+    private string ReplaceVariables(string input, IReadOnlyDictionary<string, string>? variables, int depth = 0)
+        => depth > MaxRecursionDepth || variableRegex is null || (DefaultVariables is null && variables is null)
+            ? input
+            : variableRegex.Replace(input, match =>
+            {
+                string varName = match.Groups["name"].Value;
+                return variables is not null && variables.TryGetValue(varName, out string? replacement) ? ReplaceVariables(replacement, variables, ++depth)
+                     : DefaultVariables is not null && DefaultVariables.TryGetValue(varName, out replacement) ? ReplaceVariables(replacement, variables, ++depth)
+                     : match.Value;
+            });
+
     /// <summary>
     /// Write line(s).
     /// </summary>
@@ -389,16 +402,7 @@ public class CodeStringBuilder
             return this;
         }
 
-        if (variableRegex is not null && (DefaultVariables is not null || variables is not null))
-        {
-            text = variableRegex.Replace(text, match =>
-            {
-                string varName = match.Groups["name"].Value;
-                return variables is not null && variables.TryGetValue(varName, out string? replacement) ? replacement
-                     : DefaultVariables is not null && DefaultVariables.TryGetValue(varName, out replacement) ? replacement
-                     : match.Value;
-            });
-        }
+        text = ReplaceVariables(text, variables);
 
         switch (indentControl)
         {
